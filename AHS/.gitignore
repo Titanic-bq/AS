@@ -1,0 +1,4 @@
+/data/inquiries.jsonl
+/bin/
+/target/
+*.class

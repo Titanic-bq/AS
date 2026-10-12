@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#202020" />
+    <meta
+      name="description"
+      content="Discover fireplaces, stoves and heat-storing ovens for your home. Personal consultation and delivery across Estonia from Ahjusepad."
+    />
+    <title>Ahjusepad — Warmth that feels like home</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" type="image/png" href="/ahjusepad-logo.png" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap"
+    />
+    <link rel="stylesheet" href="/styles.css?v=2" />
+    <script src="/app.js?v=5" defer></script>
+  </head>
+  <body id="top">
+    <!-- Ülariba näitab üldist teadet ja telefoninumbrit.
+         Päis sisaldab töölauamenüüd, otsingut ning väikese ekraani menüüd. -->
+    <div class="announcement">
+      <span>Free consultation and delivery across Estonia</span
+      ><span class="announcement-divider" aria-hidden="true">|</span
+      ><a href="tel:+3726002020">+372 600 2020</a>
+    </div>
+    <header class="site-header">
+      <div class="header-inner wrap">
+        <a class="logo-link" href="#top" aria-label="Ahjusepad home"
+          ><img
+            src="/ahjusepad-logo.png"
+            alt="Ahjusepad"
+            width="281"
+            height="90"
+        /></a>
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#categories" data-category-link="Ovens">Ovens</a
+          ><a href="#categories" data-category-link="Fireplaces">Fireplaces</a
+          ><a href="#categories" data-category-link="Ready-made fireplaces"
+            >Ready-made</a
+          ><a href="#categories" data-category-link="Fireplace inserts"
+            >Inserts</a
+          ><a href="#categories" data-category-link="Stoves">Stoves</a
+          ><a href="#categories" data-category-link="Accessories">Accessories</a
+          ><a class="nav-offer" href="#offers">Special offers</a>
+          <span class="language-switch" role="group" aria-label="Choose language">
+            <button type="button" data-language="et" aria-pressed="false">Eesti</button>
+            <button type="button" data-language="en" aria-pressed="true">English</button>
+          </span>
+        </nav>
+        <div class="header-actions">
+          <form class="search-form" id="search-form" role="search">
+            <label class="visually-hidden" for="site-search"
+              >Search products</label
+            ><input
+              id="site-search"
+              name="q"
+              type="search"
+              placeholder="Search products"
+              autocomplete="off"
+            /><button
+              class="icon-button search-button"
+              aria-label="Search products"
+              type="submit"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-4-4"></path>
+              </svg>
+            </button>
+          </form>
+          <button
+            class="button button-dark header-quote"
+            type="button"
+            data-open-quote
+          >
+            ✉ <span>Ask for a quote</span>
+          </button>
+          <button
+            class="icon-button menu-toggle"
+            id="menu-toggle"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-nav"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <nav
+        class="mobile-nav"
+        id="mobile-nav"
+        aria-label="Mobile navigation"
+        hidden
+      >
+        <div class="mobile-nav-links">
+          <a href="#categories">Ovens</a><a href="#categories">Fireplaces</a
+          ><a href="#categories">Ready-made fireplaces</a
+          ><a href="#categories">Fireplace inserts</a
+          ><a href="#categories">Stoves</a><a href="#categories">Accessories</a
+          ><a href="#offers">Special offers</a><a href="#contact">Contact</a>
+        </div>
+        <div class="language-switch mobile-language-switch" role="group" aria-label="Choose language">
+          <button type="button" data-language="et" aria-pressed="false">Eesti</button>
+          <button type="button" data-language="en" aria-pressed="true">English</button>
+        </div>
+        <button
+          class="button button-red mobile-quote"
+          type="button"
+          data-open-quote
+        >
+          Ask for a quote
+        </button>
+      </nav>
+    </header>
+    <main>
+      <!-- Avalehe suur tervitus ja peamised tegevusnupud.
+           Pilt ning tekst on esimesed elemendid, mida poe külastaja näeb. -->
+
+      <section class="hero">
+        <img
+          class="hero-image"
+          src="https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=960&q=75"
+          srcset="
+            https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=640&q=75 640w,
+            https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=960&q=75 960w,
+            https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=1280&q=75 1280w,
+            https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=1600&q=75 1600w
+          "
+          sizes="100vw"
+          alt="Contemporary living room with a modern fireplace"
+          fetchpriority="high"
+        />
+        <div class="hero-shade"></div>
+        <div class="hero-content wrap">
+          <p class="hero-kicker">
+            <span class="spark" aria-hidden="true">✳</span> Designed warmth
+            since 1998
+          </p>
+          <h1>Warmth that<br />feels like home.</h1>
+          <p class="hero-copy">
+            Discover efficient fireplaces, stoves and ovens, selected by
+            specialists and tailored to the way you live.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-orange" href="#products"
+              >Explore collection <span aria-hidden="true">→</span></a
+            ><button class="button button-glass" type="button" data-open-quote>
+              Book a consultation
+            </button>
+          </div>
+        </div>
+        <p class="hero-note"><span></span> Thoughtful design. Lasting heat.</p>
+      </section>
+      <section class="proof-strip" aria-label="Our experience">
+        <div class="proof-grid wrap">
+          <div><strong>25+</strong><span>years of expertise</span></div>
+          <div><strong>1,200+</strong><span>homes made warmer</span></div>
+          <div><strong>60+</strong><span>trusted brands</span></div>
+          <div><strong>A+</strong><span>efficient solutions</span></div>
+        </div>
+      </section>
+      <!-- Kategooriakaardid viivad tootenimekirja ja valivad vastava filtri.
+           data-category väärtused peavad kattuma kataloogi kategooriatega. -->
+      <section class="section wrap" id="categories">
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow">Find your warmth</p>
+            <h2>Shop by category</h2>
+          </div>
+          <a class="text-link" href="#products"
+            >View all products <span aria-hidden="true">→</span></a
+          >
+        </div>
+        <div class="category-grid">
+          <a class="category-card" href="#products" data-category="Ovens"
+            ><img
+              src="https://images.unsplash.com/photo-1512916194211-3f2b7f5f7de3?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1512916194211-3f2b7f5f7de3?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1512916194211-3f2b7f5f7de3?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1512916194211-3f2b7f5f7de3?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1512916194211-3f2b7f5f7de3?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Warm, inviting home interior"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Ovens</strong
+                ><small>Classic, trendy &amp; designer</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+          <a class="category-card" href="#products" data-category="Fireplaces"
+            ><img
+              src="https://images.unsplash.com/photo-1614255976202-8ce52bfcb655?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1614255976202-8ce52bfcb655?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1614255976202-8ce52bfcb655?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1614255976202-8ce52bfcb655?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1614255976202-8ce52bfcb655?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Fireplace in a refined living space"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Fireplaces</strong
+                ><small>Modern to rustic</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+          <a
+            class="category-card"
+            href="#products"
+            data-category="Fireplace inserts"
+            ><img
+              src="https://images.unsplash.com/photo-1603039531759-1a1bbe4f9f94?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1603039531759-1a1bbe4f9f94?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1603039531759-1a1bbe4f9f94?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1603039531759-1a1bbe4f9f94?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1603039531759-1a1bbe4f9f94?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Contemporary fireplace insert"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Fireplace inserts</strong
+                ><small>Steel, cast iron &amp; gas</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+          <a
+            class="category-card"
+            href="#products"
+            data-category="Ready-made fireplaces"
+            ><img
+              src="https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1628744876497-eb30460be9f6?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Modern ready-made fireplace"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Ready-made fireplaces</strong
+                ><small>Beautifully simple</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+          <a class="category-card" href="#products" data-category="Stoves"
+            ><img
+              src="https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Freestanding stove in a cosy interior"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Stoves</strong
+                ><small>Wood, pellet &amp; storage</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+          <a class="category-card" href="#products" data-category="Accessories"
+            ><img
+              src="https://images.unsplash.com/photo-1728404259075-209cfb5bb89c?auto=format&fit=crop&w=480&q=75"
+              srcset="
+                https://images.unsplash.com/photo-1728404259075-209cfb5bb89c?auto=format&fit=crop&w=320&q=75 320w,
+                https://images.unsplash.com/photo-1728404259075-209cfb5bb89c?auto=format&fit=crop&w=480&q=75 480w,
+                https://images.unsplash.com/photo-1728404259075-209cfb5bb89c?auto=format&fit=crop&w=720&q=75 720w,
+                https://images.unsplash.com/photo-1728404259075-209cfb5bb89c?auto=format&fit=crop&w=960&q=75 960w
+              "
+              sizes="(max-width: 560px) calc((100vw - 46px) / 2), (max-width: 900px) calc((min(100vw - 40px, 720px) - 16px) / 2), (max-width: 1472px) calc((100vw - 96px) / 3), 459px"
+              alt="Materials and details for a warm home"
+              loading="lazy"
+            /><span class="category-shade"></span
+            ><span class="category-content"
+              ><span
+                ><strong>Accessories</strong
+                ><small>Everything for installation</small></span
+              ><span class="round-arrow" aria-hidden="true">↗</span></span
+            ></a
+          >
+        </div>
+      </section>
+      <!-- Tooted laaditakse serverist GET /api/products päringuga.
+           JavaScript täidab filtrid, tulemuste loendi ja tühja/vigase vastuse teated. -->
+      <section class="products-section" id="products">
+        <div class="wrap section">
+          <div class="section-heading heading-centered">
+            <p class="eyebrow">Curated for your home</p>
+            <h2>Popular choices</h2>
+            <p>
+              Every model is carefully chosen for performance, enduring style,
+              and dependable warmth.
+            </p>
+          </div>
+          <div class="catalog-tools">
+            <div
+              class="filter-tabs"
+              id="filter-tabs"
+              role="group"
+              aria-label="Filter products"
+            >
+              <button
+                type="button"
+                class="filter-tab is-active"
+                data-filter="All"
+                aria-pressed="true"
+              >
+                All</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Fireplaces"
+                aria-pressed="false"
+              >
+                Fireplaces</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Stoves"
+                aria-pressed="false"
+              >
+                Stoves</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Fireplace inserts"
+                aria-pressed="false"
+              >
+                Inserts</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Ovens"
+                aria-pressed="false"
+              >
+                Ovens</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Ready-made fireplaces"
+                aria-pressed="false"
+              >
+                Ready-made</button
+              ><button
+                type="button"
+                class="filter-tab"
+                data-filter="Accessories"
+                aria-pressed="false"
+              >
+                Accessories
+              </button>
+            </div>
+            <p class="catalog-count" id="catalog-count" aria-live="polite">
+              Loading products…
+            </p>
+          </div>
+          <div class="product-grid" id="product-grid" aria-live="polite"></div>
+          <p class="empty-state" id="empty-state" hidden>
+            No models match that search. Try another term or contact our sales
+            team for more options.
+          </p>
+          <div class="catalog-error" id="catalog-error" hidden>
+            Products could not be loaded.
+            <button type="button" id="retry-products">Try again</button>
+          </div>
+        </div>
+      </section>
+      <!-- Selgitab konsultatsiooni ja paigalduse samme ning kuvab müügipakkumise. -->
+      <section class="process-section wrap" id="offers">
+        <div class="offer-image">
+          <img
+            src="https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=640&q=75"
+            srcset="
+              https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=480&q=75 480w,
+              https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=640&q=75 640w,
+              https://images.unsplash.com/photo-1723748972084-4124765e0a55?auto=format&fit=crop&w=960&q=75 960w
+            "
+            sizes="(max-width: 900px) min(100vw - 40px, 720px), (max-width: 1472px) 46vw, 660px"
+            alt="Wood-burning stove in a calm living room"
+            loading="lazy"
+          />
+          <div class="offer-card">
+            <span class="offer-icon" aria-hidden="true">♨</span
+            ><span
+              ><strong>Showroom special</strong
+              ><small>Selected display models up to 30% off.</small></span
+            >
+          </div>
+        </div>
+        <div class="process-copy">
+          <p class="eyebrow">From idea to first fire</p>
+          <h2>We make choosing simple.</h2>
+          <p class="process-intro">
+            The right heating solution starts with your room, chimney and daily
+            rhythm. Our specialists stay with you from first measurements to
+            safe installation.
+          </p>
+          <div class="process-steps">
+            <div class="process-step">
+              <span class="step-icon" aria-hidden="true">⌁</span>
+              <div>
+                <strong>Plan together</strong>
+                <p>Share your floor plan or book a home consultation.</p>
+              </div>
+            </div>
+            <div class="process-step">
+              <span class="step-icon" aria-hidden="true">✳</span>
+              <div>
+                <strong>Choose with confidence</strong>
+                <p>Compare efficiency, materials and design with an expert.</p>
+              </div>
+            </div>
+            <div class="process-step">
+              <span class="step-icon" aria-hidden="true">⚒</span>
+              <div>
+                <strong>Professional installation</strong>
+                <p>Certified installation and a clear handover.</p>
+              </div>
+            </div>
+          </div>
+          <button class="button button-dark" type="button" data-open-quote>
+            Talk to a specialist <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+      <!-- Kontaktikutse avab sama päringuvormi, mida kasutavad ka päise nupud. -->
+      <section class="contact-cta" id="contact">
+        <div class="contact-cta-inner wrap">
+          <div>
+            <p class="eyebrow eyebrow-light">Not sure where to start?</p>
+            <h2>
+              Let’s find the right warmth<br class="desktop-break" />
+              for your home.
+            </h2>
+          </div>
+          <button class="button button-white" type="button" data-open-quote>
+            Send us your project <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+    </main>
+    <!-- Poe kontaktandmed, aadress ja jaluse lisalingid. -->
+    <footer class="site-footer">
+      <div class="footer-grid wrap">
+        <div class="footer-brand">
+          <a class="logo-link" href="#top" aria-label="Ahjusepad home"
+            ><img
+              src="/ahjusepad-logo.png"
+              alt="Ahjusepad"
+              width="281"
+              height="90"
+              loading="lazy"
+          /></a>
+          <p>
+            Fireplaces, stoves and ovens selected for northern homes and
+            installed with care.
+          </p>
+        </div>
+        <div>
+          <p class="footer-label">Visit us</p>
+          <p class="footer-copy">
+            Pärnu mnt 139E<br />11317 Tallinn, Estonia<br />Mon–Fri 10–18 · Sat
+            10–15
+          </p>
+        </div>
+        <div>
+          <p class="footer-label">Contact</p>
+          <p class="footer-copy footer-contact">
+            <a href="tel:+3726002020">♧ &nbsp;+372 600 2020</a
+            ><a href="mailto:sales@ahjusepad.ee">✉ &nbsp;sales@ahjusepad.ee</a>
+          </p>
+        </div>
+        <div>
+          <p class="footer-label">Useful</p>
+          <p class="footer-copy footer-contact">
+            <a href="#offers">Useful reading</a
+            ><a href="#offers">Installment plans</a
+            ><a href="#offers">Campaign ovens</a
+            ><a href="#offers">Showroom models</a>
+          </p>
+        </div>
+      </div>
+      <div class="footer-bottom wrap">
+        <span
+          >© <span id="current-year">2026</span> Hendrik Jürgenson. All rights
+          reserved.</span
+        ><span>No online payments · Personal service only</span>
+      </div>
+    </footer>
+    <!-- Kõigi konsultatsiooninuppude ühine vorm.
+         app.js valideerib väljad brauseris ja saadab päringu POST /api/inquiries aadressile. -->
+    <div class="modal-backdrop" id="quote-modal" hidden>
+      <section
+        class="quote-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quote-title"
+        aria-describedby="quote-description"
+        tabindex="-1"
+      >
+        <div class="quote-heading">
+          <div>
+            <p class="eyebrow">Personal consultation</p>
+            <h2 id="quote-title">Tell us about<br />your project</h2>
+          </div>
+          <button
+            class="icon-button close-modal"
+            id="close-modal"
+            type="button"
+            aria-label="Close enquiry form"
+          >
+            ×
+          </button>
+        </div>
+        <p class="quote-description" id="quote-description">
+          Send us a few details and we’ll follow up with advice tailored to your
+          home. Your enquiry is saved on this server; no account or payment
+          details are needed.
+        </p>
+        <form id="quote-form" class="quote-form">
+          <label class="form-label"
+            >Your name <span>*</span
+            ><input
+              name="name"
+              required
+              minlength="2"
+              maxlength="100"
+              autocomplete="name"
+              placeholder="First and last name"
+          /></label>
+          <div class="form-row">
+            <label class="form-label"
+              >Email <span>*</span
+              ><input
+                name="email"
+                type="email"
+                required
+                maxlength="254"
+                autocomplete="email"
+                placeholder="you@email.com" /></label
+            ><label class="form-label"
+              >Phone<input
+                name="phone"
+                type="tel"
+                maxlength="40"
+                autocomplete="tel"
+                placeholder="+372 …"
+            /></label>
+          </div>
+          <label class="form-label"
+            >I’m interested in<select name="interest" id="interest">
+              <option value="General consultation">
+                Choose a product type
+              </option>
+              <option>Ovens</option>
+              <option>Fireplaces</option>
+              <option>Ready-made fireplaces</option>
+              <option>Fireplace inserts</option>
+              <option>Stoves</option>
+              <option>Accessories</option>
+              <option>Showroom offers</option>
+            </select></label
+          ><label class="form-label"
+            >Project details<textarea
+              name="message"
+              rows="4"
+              maxlength="3000"
+              placeholder="Room size, preferred fuel, installation timeline…"
+            ></textarea></label
+          ><label class="consent-label"
+            ><input type="checkbox" name="consent" value="true" required /><span
+              >I agree that Ahjusepad may use these details to respond to my
+              enquiry.</span
+            ></label
+          >
+          <div class="honeypot" aria-hidden="true">
+            <label
+              >Leave this field empty<input
+                name="website"
+                tabindex="-1"
+                autocomplete="off"
+            /></label>
+          </div>
+          <button class="button button-red submit-button" type="submit">
+            Send enquiry <span aria-hidden="true">→</span>
+          </button>
+          <p
+            class="form-feedback"
+            id="form-feedback"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </form>
+        <div class="quote-bottom">
+          <a href="tel:+3726002020">+372 600 2020</a
+          ><span>Reply within 1 business day</span>
+        </div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
