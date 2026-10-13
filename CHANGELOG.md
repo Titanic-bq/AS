@@ -6,6 +6,27 @@ tehtud tööd; tulevikuplaanid on eraldi failis
 
 ## 2026-10-13
 
+### Administraatori sisselogimine (esimene etapp)
+
+- Asendati `X-Admin-Token` ligipääs keskkonnamuutujatest seadistatava
+  kasutajanime ja parooliga.
+- Lisati PBKDF2 paroolikontroll, piiratud juhuslikud sessioonid ja
+  `HttpOnly`/`SameSite=Strict` küpsis ning sessioonipõhine CSRF-tõend.
+- Lisati mitme konto seadistusfail ning `ADMIN` ja piiratud andmetega
+  `VIEWER` roll.
+- Kaitsti sisselogimist ja väljalogimist Origin-kontrolliga ning päringute API
+  sessiooniga; lisati sisselogimiskatsete piirang ja admini tegevuste logimine.
+- Lisati `/admin` haldusleht, kus administraator näeb kõiki päringuandmeid ja
+  vaatleja ainult päringu saabumise aega ning huvipakkuvat toodet.
+- Piirati serveri kuulamine loopback-aadressile, et vältida otse HTTP kaudu
+  võrku avaldamist; väliseks HTTPS-juurdepääsuks tuleb kasutada puhverserverit.
+- Lisati Caddy HTTPS-puhverserveri näidis ja jäeti päris domeeni/serveri
+  seadistus juurutuskeskkonna tööks.
+- Päris domeeni ja serveri HTTPS-juurutus on endiselt seadistamata.
+- Ühendati poe päringu salvestamise järel Formspree vormiga
+  `xjygezjb`, et saada vormis määratud ühele e-posti aadressile teavitus.
+  Teavituse tõrge ei mõjuta päringu kohalikku salvestamist.
+
 ### Dokumentatsioon
 
 - Lisati eestikeelne muudatuste ajalugu.

@@ -7,22 +7,34 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.URLDecoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -31,8 +43,23 @@ import java.util.zip.GZIPOutputStream;
  * soovi korral administraatori API-päringuid.
  */
 public final class Main {
+    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final int MAX_BODY_BYTES = 16 * 1024;
+    private static final URI DEFAULT_FORMSPREE_ENDPOINT =
+            URI.create("https://formspree.io/f/xjygezjb");
+    private static final Pattern FORMSPREE_ENDPOINT_PATH = Pattern.compile("^/f/[A-Za-z0-9]+$");
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$");
+    private static final Pattern CONFIGURED_USER_PROPERTY =
+            Pattern.compile("user\\.(\\d+)\\.(username|password|role)");
+    private static final Pattern JSON_CREATED_AT =
+            Pattern.compile("\"createdAt\"\\s*:\\s*(\"(?:\\\\.|[^\"\\\\])*\")");
+    private static final Pattern JSON_INTEREST =
+            Pattern.compile("\"interest\"\\s*:\\s*(\"(?:\\\\.|[^\"\\\\])*\")");
+    private static final Pattern IP_ADDRESS = Pattern.compile("[0-9A-Fa-f:.]{1,45}");
     // API kaudu väljastatavad kategooriad. Hoia loend kooskõlas Catalogiga
     // ning index.html-is olevate filtrite ja päringuvormi valikutega.
     private static final List<String> CATEGORIES = List.of(
@@ -44,26 +71,57 @@ public final class Main {
             "/index.html", "index.html",
             "/styles.css", "styles.css",
             "/app.js", "app.js",
-            "/ahjusepad-logo.png", "ahjusepad-logo.png"
+            "/ahjusepad-logo.png", "ahjusepad-logo.png",
+            "/admin", "admin.html",
+            "/admin.html", "admin.html",
+            "/admin.css", "admin.css",
+            "/admin.js", "admin.js"
     );
 
     private final InquiryStore inquiryStore;
-    private final String adminToken;
+    private final AdminAuth adminAuth;
+    private final URI formspreeEndpoint;
 
-    private Main(Path dataDirectory, String adminToken) throws IOException {
+    private Main(Path dataDirectory, AdminAuth adminAuth, URI formspreeEndpoint) throws IOException {
         this.inquiryStore = new InquiryStore(dataDirectory);
-        this.adminToken = adminToken == null ? "" : adminToken;
+        this.adminAuth = adminAuth;
+        this.formspreeEndpoint = formspreeEndpoint;
     }
 
     public static void main(String[] args) throws Exception {
-        // Valikulised keskkonnamuutujad: PORT muudab pordi,
-        // DATA_DIR päringufaili asukoha ja ADMIN_TOKEN lubab päringute haldus-API.
+        // Administraatorid saab määrata keskkonnamuutujate või välise kasutajafailiga.
         int port = parsePort(System.getenv().getOrDefault("PORT", args.length > 0 ? args[0] : "8080"));
         Path data = Path.of(System.getenv().getOrDefault("DATA_DIR", "data"));
-        String adminToken = System.getenv().getOrDefault("ADMIN_TOKEN", "");
-        Main app = new Main(data, adminToken);
+        String bindAddress = System.getenv().getOrDefault("BIND_ADDRESS", "127.0.0.1");
+        InetAddress address = InetAddress.getByName(bindAddress);
+        String adminUsername = System.getenv("ADMIN_USERNAME");
+        String adminPassword = System.getenv("ADMIN_PASSWORD");
+        String adminUsersFile = System.getenv("ADMIN_USERS_FILE");
+        URI formspreeEndpoint = parseFormspreeEndpoint(
+                System.getenv("FORMSPREE_ENDPOINT"), DEFAULT_FORMSPREE_ENDPOINT);
+        boolean cookieSecure = parseBoolean(System.getenv().getOrDefault("ADMIN_COOKIE_SECURE", "false"),
+                "ADMIN_COOKIE_SECURE");
+        AdminAuth adminAuth = null;
+        if (adminUsersFile != null && !adminUsersFile.isBlank()) {
+            if (adminUsername != null || adminPassword != null) {
+                throw new IllegalArgumentException(
+                        "Use either ADMIN_USERS_FILE or ADMIN_USERNAME/ADMIN_PASSWORD, not both");
+            }
+            adminAuth = new AdminAuth(loadAdminUsers(Path.of(adminUsersFile)), cookieSecure);
+        } else if (adminUsername != null || adminPassword != null) {
+            if (adminUsername == null || adminPassword == null) {
+                throw new IllegalArgumentException("ADMIN_USERNAME and ADMIN_PASSWORD must be configured together");
+            }
+            adminAuth = new AdminAuth(List.of(new AdminAuth.ConfiguredUser(adminUsername, adminPassword, "ADMIN")),
+                    cookieSecure);
+        }
+        if (!address.isLoopbackAddress()) {
+            throw new IllegalArgumentException(
+                    "The server must bind to a loopback address; expose it through a trusted HTTPS reverse proxy");
+        }
+        Main app = new Main(data, adminAuth, formspreeEndpoint);
 
-        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 64);
+        HttpServer server = HttpServer.create(new InetSocketAddress(address, port), 64);
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
                 Math.max(4, Runtime.getRuntime().availableProcessors()),
                 Math.max(8, Runtime.getRuntime().availableProcessors() * 2),
@@ -76,8 +134,51 @@ public final class Main {
             executor.shutdown();
         }, "store-shutdown"));
         server.start();
-        System.out.printf("Ahjusepad storefront running on http://localhost:%d (data: %s)%n",
-                port, data.toAbsolutePath().normalize());
+        System.out.printf("Ahjusepad storefront running on http://%s:%d (data: %s)%n",
+                address.getHostAddress(), port, data.toAbsolutePath().normalize());
+    }
+
+    private static List<AdminAuth.ConfiguredUser> loadAdminUsers(Path usersFile) throws IOException {
+        Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(usersFile, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+        }
+        Map<Integer, Map<String, String>> configuredUsers = new TreeMap<>();
+        for (String key : properties.stringPropertyNames()) {
+            var matcher = CONFIGURED_USER_PROPERTY.matcher(key);
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("Unsupported admin user setting: " + key);
+            }
+            int index;
+            try {
+                index = Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException("Admin user indexes must be between 1 and 100", ex);
+            }
+            if (index < 1 || index > 100) {
+                throw new IllegalArgumentException("Admin user indexes must be between 1 and 100");
+            }
+            String field = matcher.group(2);
+            String previous = configuredUsers.computeIfAbsent(index, ignored -> new LinkedHashMap<>())
+                    .put(field, properties.getProperty(key));
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate admin user setting: " + key);
+            }
+        }
+        if (configuredUsers.isEmpty()) {
+            throw new IllegalArgumentException("Admin user file must contain at least one user");
+        }
+        List<AdminAuth.ConfiguredUser> users = new ArrayList<>();
+        for (int index = 1; index <= configuredUsers.size(); index++) {
+            Map<String, String> user = configuredUsers.get(index);
+            if (user == null || user.size() != 3) {
+                throw new IllegalArgumentException(
+                        "Admin user indexes must be consecutive and define username, password, and role");
+            }
+            users.add(new AdminAuth.ConfiguredUser(
+                    user.get("username"), user.get("password"), user.get("role")));
+        }
+        return List.copyOf(users);
     }
 
     private static int parsePort(String raw) {
@@ -88,6 +189,33 @@ public final class Main {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException("PORT must be a number", ex);
         }
+    }
+
+    private static boolean parseBoolean(String raw, String setting) {
+        if ("true".equalsIgnoreCase(raw)) return true;
+        if ("false".equalsIgnoreCase(raw)) return false;
+        throw new IllegalArgumentException(setting + " must be true or false");
+    }
+
+    private static URI parseFormspreeEndpoint(String configured, URI defaultEndpoint) {
+        if (configured == null || configured.isBlank()) return defaultEndpoint;
+        final URI endpoint;
+        try {
+            endpoint = URI.create(configured.strip());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("FORMSPREE_ENDPOINT must be a valid Formspree form URL", ex);
+        }
+        if (!"https".equalsIgnoreCase(endpoint.getScheme())
+                || !"formspree.io".equalsIgnoreCase(endpoint.getHost())
+                || endpoint.getPort() != -1
+                || endpoint.getRawUserInfo() != null
+                || endpoint.getRawQuery() != null
+                || endpoint.getRawFragment() != null
+                || !FORMSPREE_ENDPOINT_PATH.matcher(endpoint.getPath()).matches()) {
+            throw new IllegalArgumentException(
+                    "FORMSPREE_ENDPOINT must use https://formspree.io/f/<form-id>");
+        }
+        return endpoint;
     }
 
     private void handle(HttpExchange exchange) throws IOException {
@@ -187,22 +315,97 @@ public final class Main {
                 throw new BadRequest(400, "Consent is required to submit an enquiry.");
             }
             Map<String, String> saved = inquiryStore.save(name, email, phone, interest, message);
+            sendFormspreeNotification(saved);
             sendJson(exchange, 201, Map.of("status", "saved", "id", saved.get("id"),
                     "message", "Thank you. Your enquiry has been saved."));
             return;
         }
+        if (path.equals("/api/admin/login")) {
+            if (!method.equals("POST")) { methodNotAllowed(exchange, "POST"); return; }
+            requireAdminAuthConfigured();
+            requireSameOrigin(exchange);
+            String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+            if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("application/x-www-form-urlencoded")) {
+                throw new BadRequest(415, "Content-Type must be application/x-www-form-urlencoded");
+            }
+            Map<String, String> form = parseForm(readLimitedBody(exchange));
+            String username = limit(form.getOrDefault("username", ""), 100, "username");
+            String password = limit(form.getOrDefault("password", ""), 256, "password");
+            String remoteAddress = remoteAddress(exchange);
+            try {
+                String sessionToken = adminAuth.login(username, password, remoteAddress);
+                AdminAuth.SessionInfo session = adminAuth.session(sessionToken);
+                LOGGER.log(Level.INFO, "Admin event action=login user={0} remote={1}",
+                        new Object[]{session.username(), remoteAddress});
+                setAdminCookie(exchange, sessionToken, AdminAuth.SESSION_MAX_AGE_SECONDS);
+                sendJson(exchange, 200, Map.of(
+                        "status", "authenticated",
+                        "username", session.username(),
+                        "role", session.role(),
+                        "csrfToken", session.csrfToken()));
+            } catch (AdminAuth.InvalidCredentials ex) {
+                LOGGER.log(Level.WARNING, "Admin event action=login_failed remote={0}", remoteAddress);
+                sendJson(exchange, 401, Map.of("error", "Invalid username or password"));
+            } catch (AdminAuth.LoginRateLimited ex) {
+                LOGGER.log(Level.WARNING, "Admin event action=login_rate_limited remote={0}", remoteAddress);
+                sendJson(exchange, 429, Map.of("error", "Too many login attempts. Try again later."));
+            } catch (AdminAuth.SessionLimitReached ex) {
+                sendJson(exchange, 503, Map.of("error", "The maximum number of admin sessions is active"));
+            }
+            return;
+        }
+        if (path.equals("/api/admin/session")) {
+            if (!method.equals("GET")) { methodNotAllowed(exchange, "GET"); return; }
+            requireAdminAuthConfigured();
+            String token = adminSessionToken(exchange);
+            AdminAuth.SessionInfo session = token == null ? null : adminAuth.session(token);
+            if (session == null) {
+                sendJson(exchange, 200, Map.of("authenticated", false));
+                return;
+            }
+            setAdminCookie(exchange, token, AdminAuth.SESSION_MAX_AGE_SECONDS);
+            sendJson(exchange, 200, Map.of(
+                    "authenticated", true,
+                    "username", session.username(),
+                    "role", session.role(),
+                    "csrfToken", session.csrfToken()));
+            return;
+        }
+        if (path.equals("/api/admin/logout")) {
+            if (!method.equals("POST")) { methodNotAllowed(exchange, "POST"); return; }
+            requireAdminAuthConfigured();
+            requireSameOrigin(exchange);
+            String token = adminSessionToken(exchange);
+            AdminAuth.SessionInfo session = token == null ? null : adminAuth.session(token);
+            if (session != null) requireCsrfToken(exchange, session);
+            String username = session == null ? "" : session.username();
+            if (token != null && adminAuth.logout(token)) {
+                LOGGER.log(Level.INFO, "Admin event action=logout user={0} remote={1}",
+                        new Object[]{username, remoteAddress(exchange)});
+            }
+            setAdminCookie(exchange, "", 0);
+            sendJson(exchange, 200, Map.of("status", "logged_out"));
+            return;
+        }
         if (path.equals("/api/admin/inquiries")) {
             if (!method.equals("GET")) { methodNotAllowed(exchange, "GET"); return; }
-            if (adminToken.isBlank()) throw new BadRequest(404, "Not found");
-            String supplied = exchange.getRequestHeaders().getFirst("X-Admin-Token");
-            if (supplied == null || !MessageDigest.isEqual(adminToken.getBytes(StandardCharsets.UTF_8), supplied.getBytes(StandardCharsets.UTF_8))) {
-                throw new BadRequest(401, "Unauthorized");
+            requireAdminAuthConfigured();
+            String token = adminSessionToken(exchange);
+            AdminAuth.SessionInfo session = token == null ? null : adminAuth.session(token);
+            if (session == null) {
+                LOGGER.log(Level.WARNING, "Admin event action=unauthorized_inquiry_read remote={0}",
+                        remoteAddress(exchange));
+                throw new BadRequest(401, "Authentication required");
             }
+            setAdminCookie(exchange, token, AdminAuth.SESSION_MAX_AGE_SECONDS);
+            LOGGER.log(Level.INFO, "Admin event action=read_inquiries user={0} role={1} remote={2}",
+                    new Object[]{session.username(), session.role(), remoteAddress(exchange)});
             List<String> lines = inquiryStore.allJsonLines();
             StringBuilder json = new StringBuilder("[");
             for (int i = 0; i < lines.size(); i++) {
                 if (i > 0) json.append(',');
-                json.append(lines.get(i));
+                json.append(session.role().equals("ADMIN")
+                        ? lines.get(i) : inquirySummaryJson(lines.get(i)));
             }
             sendRaw(exchange, 200, "application/json; charset=utf-8", json.append(']').toString());
             return;
@@ -210,10 +413,82 @@ public final class Main {
         sendJson(exchange, 404, Map.of("error", "Not found"));
     }
 
-    private static void checkSameOriginIfProvided(HttpExchange exchange) {
+    private void requireAdminAuthConfigured() {
+        if (adminAuth == null) throw new BadRequest(404, "Not found");
+    }
+
+    private void sendFormspreeNotification(Map<String, String> inquiry) {
+        try {
+            sendFormspreeNotification(formspreeEndpoint, inquiry);
+            LOGGER.log(Level.INFO, "Formspree notification sent for inquiry id={0}", inquiry.get("id"));
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            LOGGER.log(Level.WARNING, "Formspree notification interrupted for inquiry id={0}",
+                    inquiry.get("id"));
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "Formspree notification failed for inquiry id={0}: {1}",
+                    new Object[]{inquiry.get("id"), ex.getMessage()});
+        }
+    }
+
+    static void sendFormspreeNotification(URI endpoint, Map<String, String> inquiry)
+            throws IOException, InterruptedException {
+        String body = List.of("name", "email", "phone", "interest", "message").stream()
+                .filter(inquiry::containsKey)
+                .map(key -> URLEncoder.encode(key, StandardCharsets.UTF_8) + "="
+                        + URLEncoder.encode(inquiry.get(key), StandardCharsets.UTF_8))
+                .collect(java.util.stream.Collectors.joining("&"));
+        HttpRequest request = HttpRequest.newBuilder(endpoint)
+                .timeout(Duration.ofSeconds(5))
+                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
+        HttpResponse<Void> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.discarding());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("Formspree returned HTTP " + response.statusCode());
+        }
+    }
+
+    private static String adminSessionToken(HttpExchange exchange) {
+        for (String header : exchange.getRequestHeaders().getOrDefault("Cookie", List.of())) {
+            for (String cookie : header.split(";")) {
+                String[] parts = cookie.strip().split("=", 2);
+                if (parts.length == 2 && parts[0].equals(AdminAuth.COOKIE_NAME)) return parts[1];
+            }
+        }
+        return null;
+    }
+
+    private static String inquirySummaryJson(String jsonLine) {
+        var createdAt = JSON_CREATED_AT.matcher(jsonLine);
+        var interest = JSON_INTEREST.matcher(jsonLine);
+        if (!createdAt.find() || !interest.find()) {
+            throw new IllegalStateException("Stored inquiry is missing summary fields");
+        }
+        return "{\"createdAt\":" + createdAt.group(1) + ",\"interest\":" + interest.group(1) + "}";
+    }
+
+    private static String remoteAddress(HttpExchange exchange) {
+        String proxiedAddress = exchange.getRequestHeaders().getFirst("X-Real-IP");
+        if (proxiedAddress != null && IP_ADDRESS.matcher(proxiedAddress).matches()) {
+            return proxiedAddress;
+        }
+        return exchange.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    private void setAdminCookie(HttpExchange exchange, String token, int maxAgeSeconds) {
+        StringBuilder cookie = new StringBuilder(AdminAuth.COOKIE_NAME).append('=').append(token)
+                .append("; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=").append(maxAgeSeconds);
+        if (adminAuth.cookieSecure()) cookie.append("; Secure");
+        exchange.getResponseHeaders().add("Set-Cookie", cookie.toString());
+    }
+
+    private static void requireSameOrigin(HttpExchange exchange) {
         String origin = exchange.getRequestHeaders().getFirst("Origin");
-        // Puuduv Origin on lubatud näiteks käsureakliendile või serveritevahelisele päringule.
-        if (origin == null || origin.isBlank()) return;
+        if (origin == null || origin.isBlank()) {
+            throw new BadRequest(403, "Origin header is required");
+        }
         final URI uri;
         try {
             uri = URI.create(origin);
@@ -221,10 +496,30 @@ public final class Main {
             throw new BadRequest(403, "Invalid origin");
         }
         String host = exchange.getRequestHeaders().getFirst("Host");
+        String forwardedProto = exchange.getRequestHeaders().getFirst("X-Forwarded-Proto");
+        String expectedScheme = forwardedProto == null ? "http" : forwardedProto.toLowerCase(Locale.ROOT);
         if (host == null || uri.getHost() == null || uri.getRawAuthority() == null
-                || !uri.getRawAuthority().equalsIgnoreCase(host)) {
+                || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null
+                || (uri.getRawPath() != null && !uri.getRawPath().isEmpty())
+                || !uri.getRawAuthority().equalsIgnoreCase(host)
+                || !expectedScheme.equals("http") && !expectedScheme.equals("https")
+                || !expectedScheme.equalsIgnoreCase(uri.getScheme())) {
             throw new BadRequest(403, "Cross-origin submission is not allowed");
         }
+    }
+
+    private static void requireCsrfToken(HttpExchange exchange, AdminAuth.SessionInfo session) {
+        String supplied = exchange.getRequestHeaders().getFirst("X-CSRF-Token");
+        if (supplied == null || !MessageDigest.isEqual(
+                session.csrfToken().getBytes(StandardCharsets.UTF_8),
+                supplied.getBytes(StandardCharsets.UTF_8))) {
+            throw new BadRequest(403, "A valid CSRF token is required");
+        }
+    }
+
+    private static void checkSameOriginIfProvided(HttpExchange exchange) {
+        String origin = exchange.getRequestHeaders().getFirst("Origin");
+        if (origin != null && !origin.isBlank()) requireSameOrigin(exchange);
     }
 
     private static String readLimitedBody(HttpExchange exchange) throws IOException {

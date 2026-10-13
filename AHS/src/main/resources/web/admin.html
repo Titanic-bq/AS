@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#202020" />
+    <title>Haldusvaade — Ahjusepad</title>
+    <link rel="stylesheet" href="/admin.css" />
+    <script src="/admin.js" defer></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <a class="brand" href="/" aria-label="Ahjusepad veebipood">Ahjusepad</a>
+        <span class="eyebrow">Turvaline haldus</span>
+      </header>
+
+      <section class="panel login-panel" id="login-panel" aria-labelledby="login-title">
+        <p class="eyebrow">Administraatoritele</p>
+        <h1 id="login-title">Logi sisse</h1>
+        <p class="intro">Päringute vaatamiseks kasuta sulle määratud kontot.</p>
+        <form id="login-form">
+          <label for="username">Kasutajanimi</label>
+          <input id="username" name="username" autocomplete="username" required maxlength="100" />
+          <label for="password">Parool</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            maxlength="256"
+          />
+          <button class="button" type="submit">Logi sisse</button>
+        </form>
+        <p class="feedback" id="login-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel inquiries-panel" id="inquiries-panel" hidden aria-labelledby="inquiries-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" id="account-role">Administraator</p>
+            <h1 id="inquiries-title">Kliendipäringud</h1>
+            <p class="intro" id="account-name"></p>
+          </div>
+          <button class="button button-secondary" id="logout-button" type="button">Logi välja</button>
+        </div>
+        <p class="feedback" id="inquiries-feedback" role="status" aria-live="polite"></p>
+        <div class="table-scroll">
+          <table>
+            <thead id="inquiries-head"></thead>
+            <tbody id="inquiries-body"></tbody>
+          </table>
+        </div>
+      </section>
+      <a class="back-link" href="/">← Tagasi poodi</a>
+    </main>
+  </body>
+</html>

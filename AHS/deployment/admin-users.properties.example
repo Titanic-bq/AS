@@ -1,0 +1,9 @@
+# Kopeeri see fail admin-users.properties nime alla väljapoole lähtekoodihoidlat.
+# Kasuta igale inimesele eraldi tugevat ja unikaalset parooli (vähemalt 16 märki).
+user.1.username=admin
+user.1.password=MUUDA-SEE-UNIKAALSEKS-16-VOI-ENAMA-MARGILISEKS-PAROOLIKS
+user.1.role=ADMIN
+
+user.2.username=vaatleja
+user.2.password=MUUDA-SEE-TEISEKS-UNIKAALSEKS-PAROOLIKS-16-MARKI
+user.2.role=VIEWER

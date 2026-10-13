@@ -1,19 +1,85 @@
 # Järgmised arendussammud
 
-See on kavandatud tööjärjekord, mitte juba valmis loend. Enne
-kasutuselevõttu tuleks lahendada administreerimise ja
-isikuandmete turvalisus.
+Siin on kirjas valminud arendussammud ning poe järgmised tööd.
 
 ## 1. Turvaline administraatori ligipääs
 
 **Eesmärk:** võimaldada päringuid hallata nii, et kõrvalised inimesed neid ei
 näe.
 
-- Asendada lihtne `ADMIN_TOKEN`-päis sobiva autentimisega.
-- Lisada rollipõhine ligipääs ja administraatori tegevuste logimine.
-- Kasutada HTTPS-i ning hoida saladusi keskkonnas, mitte lähtekoodis.
-- Piirata administraatori API võrgu- ja päringusageduse reeglitega.
-- Kontrollida, et päringuandmeid tagastatakse ainult volitatud kasutajale.
+Autentimine, rollid ja esimene haldusvaade on rakendatud:
+
+- Kasutajate paroolid hoitakse ainult serveri keskkonnas või väljaspool
+  lähtekoodihoidlat asuvas omaduste failis ning neid kontrollitakse PBKDF2
+  räsi abil.
+- Sisselogimine väljastab juhusliku, ajaliselt piiratud
+  `HttpOnly`/`SameSite=Strict` küpsise ning sessiooniga seotud CSRF-tõendi.
+
+- `ADMIN` roll näeb kõiki päringuandmeid. `VIEWER` roll näeb ainult saabumise
+  aega ja huvipakkuvat toodet.
+- `/admin` pakub eestikeelset sisselogimis- ja päringute vaatamise lehte.
+- Lisatud on sisselogimiskatsete piiramine ning admini sisselogimise,
+  väljalogimise ja päringute vaatamise auditlogi.
+- Sisselogimine ja väljalogimine nõuavad sobivat Origin-päist; väljalogimisel
+  kontrollitakse lisaks sessiooni CSRF-tõendit.
+- Server kuulab ainult loopback-aadressil. Lisatud on Caddy puhverserveri näidis
+  failis `AHS/deployment/Caddyfile`; see ei seadista veel päris serverit.
+
+Päris avalikuks kasutuseks on vaja enda domeeni ja serverit. Suuna domeeni DNS
+serverile, ava tulemüüris pordid 80 ja 443, paigalda Caddy ning seadista
+`AHS/deployment/Caddyfile` järgi HTTPS-puhverserver. Caddy väljastab ja uuendab
+sertifikaadid automaatselt. Rakendus peab jääma kuulama aadressil
+`127.0.0.1:8080`; Caddy suunab päringud sealt edasi.
+
+Sea serveri keskkonda järgmised väärtused:
+
+```powershell
+$env:PORT = '8080'
+$env:BIND_ADDRESS = '127.0.0.1'
+$env:ADMIN_COOKIE_SECURE = 'true'
+$env:ADMIN_USERS_FILE = 'C:\etc\ahjusepad\admin-users.properties'
+$env:DOMAIN = 'pood.example.ee'
+```
+
+Muuda `DOMAIN` enda domeeniks ning käivita Caddy samast terminalist:
+
+```powershell
+caddy run --config .\deployment\Caddyfile
+```
+
+Päris serveris käivita Java rakendus ja Caddy teenustena, et need
+taaskäivitamisel uuesti käivituksid.
+
+Kasutajafaili näidis on `AHS/deployment/admin-users.properties.example`.
+Kopeeri see turvalisse asukohta, muuda näidisparoolid unikaalseteks vähemalt
+16-märgilisteks saladusteks ning piira faili õigused ainult serveri
+teenusekasutajale (Linuxis näiteks `chmod 600`). Ära lisa päris
+`admin-users.properties` faili Git-hoidlasse; see on `.gitignore`-is.
+`ADMIN_USERS_FILE` ning `ADMIN_USERNAME`/`ADMIN_PASSWORD` seadistusi ei tohi
+koos kasutada. Üksiku konto jaoks võib jätkata keskkonnamuutujate kasutamist.
+Kasutaja lisamiseks või eemaldamiseks muuda seadistusfaili ja käivita Java
+server uuesti; olemasolevad sessioonid kehtivad ainult kuni serveri
+taaskäivitamiseni või nende aegumiseni.
+
+Administraatori lõpp-punktid:
+
+- `POST /api/admin/login` — vormiväljad `username` ja `password`;
+- `GET /api/admin/session` — kontrollib sessiooni ning väljastab CSRF-tõendi;
+- `POST /api/admin/logout` — nõuab `Origin`- ja `X-CSRF-Token` päiseid;
+- `GET /api/admin/inquiries` — tagastab rollile lubatud päringuandmed.
+
+Administraatori API on välja lülitatud, kui kasutajafail ega keskkonnamuutujad
+pole määratud. Kasutajafailis on kasutaja jaoks omadused `user.N.username`,
+`user.N.password` ja `user.N.role`; indeksid algavad ühest ja on järjestikused.
+Toetatud rollid on `ADMIN` ning `VIEWER`. Sisselogimise ja väljalogimise
+Postmani päringutele lisa `Origin: https://<sinu-domeen>`; väljalogimisel lisa
+ka sessiooni `csrfToken` väärtus päisesse `X-CSRF-Token`. Kohalikus HTTP-testis
+kasuta sama hosti ja `http` skeemi.
+
+Järgmised tööd on endiselt vajalikud:
+
+- Seadistada Caddy ja Java rakendus päris domeeni ning serveri peal, enne kui
+  haldusvaade avalikku internetti avatakse.
 
 **Valmis siis, kui:** kaitsmata päring saab keeldumise ning
 administraator saab andmeid turvaliselt vaadata.
@@ -22,13 +88,13 @@ administraator saab andmeid turvaliselt vaadata.
 
 **Eesmärk:** muuta saabunud päringutele vastamine mugavaks.
 
-- Luua sisselogimise taga administraatori vaade.
-- Kuvada päringu saabumise aeg, kontaktandmed ja huvipakkuv toode.
+- Administraatori vaade kuvab kuupäeva, kontakti, huvipakkuva toote ja sõnumi;
+  vaatlejale kuvatakse ainult kuupäev ning huvipakkuv toode.
 - Lisada otsing, kuupäeva järgi filtreerimine ning olekud, näiteks „Uus“,
   „Võtame ühendust“ ja „Suletud“.
-- Lubada päringut eksportida ainult sobiva ligipääsuga kasutajal.
+- Lubada päringuid eksportida ainult `ADMIN` rolliga kasutajal.
 
-**Eeldus:** esmalt peab olema valmis administraatori autentimine.
+**Eeldus:** autentimine, rollid ja lihtne päringute vaatamine on valmis.
 
 ## 3. Andmebaas, varundus ja andmete elutsükkel
 
@@ -48,14 +114,24 @@ kustutamine toimib dokumenteeritud viisil.
 
 **Eesmärk:** anda ettevõttele ja päringu saatjale päringu saabumisest teada.
 
-- Saata ettevõtte aadressile teavitus uuest päringust.
+- Uue päringu teavitus saadetakse Formspree vormi kaudu Gmaili aadressile,
+  mis on valitud Formspree Workflow e-posti tegevuses.
+- Poe vorm salvestab päringu endiselt `data/inquiries.jsonl` faili ning saadab
+  seejärel väljad Formspreele; Formspree tõrge logitakse ega kustuta salvestatud
+  päringut.
+- Kasutusel olev vorm: `https://formspree.io/f/xjygezjb`. Teise vormi jaoks
+  seadista `FORMSPREE_ENDPOINT` serveri keskkonnas kujul
+  `https://formspree.io/f/<vormi-id>`.
+- Formspree ei vaja Gmaili parooli ega API-võtit. Teavituse saaja ja
+  e-kirja mall seadistatakse Formspree juhtpaneeli Workflow vaates.
 - Saata kliendile kinnitus, kui e-posti teenus on seadistatud.
-- Hoida e-posti teenuse võtmeid serveri keskkonnaseadetes.
+- Hoida võimalike tulevaste e-posti teenuse võtmeid serveri keskkonnaseadetes.
 - Käsitleda ajutisi saatmisvigu nii, et päring ise jääks salvestatuks ja
-  teavitust saaks uuesti proovida.
+  teavituse tulemust saaks jälgida serveri logidest.
 
-**Valmis siis, kui:** testpäring salvestub ka e-posti teenuse tõrke korral ning
-teavituse tulemus on jälgitav.
+**Valmis siis, kui:** Formspree saab vormi kaudu uue päringu ning saadab
+seadistatud Gmaili aadressile teavituse. Tee enne kasutuselevõttu päris
+vormitest ja kontrolli ka Gmaili rämpsposti kausta.
 
 ## 5. Testid ja pidev kontroll
 
@@ -87,20 +163,7 @@ riski.
 **Valmis siis, kui:** kataloogi saab uuendada Java koodi muutmata ning mõlemad
 keeled kuvavad sama tooteinfot.
 
-## 7. Ligipääsetavus ja jõudlus
-
-**Eesmärk:** teha pood mugavaks erinevate seadmete ja abitehnoloogiatega
-kasutajatele.
-
-- Parandada Lighthouse'i leitud värvikontrasti probleemid.
-- Kontrollida kogu lehte klaviatuuri ja ekraanilugejaga.
-- Kontrollida piltide suurusi, fontide laadimist ning mobiilivaate toimimist.
-- Käivitada Lighthouse pärast muudatusi ja talletada tulemused võrdlemiseks.
-
-**Valmis siis, kui:** olulised kasutajateekonnad on klaviatuuriga läbitavad ja
-uued Lighthouse'i mõõtmised kinnitavad parandusi.
-
-## 8. Tootmiskeskkonda juurutamine ja seire
+## 7. Tootmiskeskkonda juurutamine ja seire
 
 **Eesmärk:** käitada teenust usaldusväärselt väljaspool arendaja arvutit.
 
@@ -113,16 +176,6 @@ uued Lighthouse'i mõõtmised kinnitavad parandusi.
 
 **Valmis siis, kui:** teenust saab uuendada ja taastada dokumenteeritud
 protseduuriga ning tõrked on märgatavad.
-
-## Soovituslik järjekord
-
-1. Testid ja rakenduse käivitamise korratavus.
-2. Administraatori autentimine ja andmekaitse.
-3. Andmebaas, varundus ning säilitustähtajad.
-4. Päringute haldusvaade.
-5. E-posti teavitused.
-6. Toodete administreerimine ja tõlked.
-7. Ligipääsetavus, jõudlus ning tootmiskeskkonda juurutamine.
 
 Väikese demo puhul saab samme teha järk-järgult. Enne avalikku kasutuselevõttu,
 on kohustuslik teha turvalise autentimise, HTTPS-i, varundamise ega
