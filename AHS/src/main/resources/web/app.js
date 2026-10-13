@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const FORMSPREE_ENDPOINT = "https://formspree.io/f/xjygezjb";
+
   // Kogu lehe ühine olek: valitud kategooria, otsing ja kuvatavad tooted.
   // requestNumber aitab eirata vana võrgupäringu vastust, kui kasutaja
   // alustas enne selle saabumist juba uut otsingut või valis teise kategooria.
@@ -146,6 +148,8 @@
       "Päringut ei õnnestunud salvestada. Palun proovi uuesti.",
     "Thank you — your enquiry has been saved. Our team can follow up using the contact details you provided.":
       "Aitäh! Sinu päring on salvestatud. Meie tiim võtab sinuga ühendust, kasutades antud kontaktandmeid.",
+    "Your enquiry was saved, but the email notification could not be sent. Please call us to confirm.":
+      "Sinu päring salvestati, kuid e-posti teavitust ei õnnestunud saata. Palun helista meile, et päringu saamine üle kinnitada.",
     "Your enquiry was saved successfully.": "Sinu päring on edukalt salvestatud.",
     "A connection problem occurred. Please try again.":
       "Ühendusega tekkis probleem. Palun proovi uuesti.",
@@ -488,8 +492,7 @@
     }
   });
 
-  // Saada vorm serverile URL-kodeeritud andmetena.
-  // Näita kasutajale õnnestumise või vea teadet ja luba nupp alati uuesti kasutusele.
+  // Salvesta päring serverisse ja saada teavitus brauserist Formspreele.
   quoteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!quoteForm.reportValidity()) return;
@@ -517,12 +520,48 @@
         throw new Error(
           translate(data.error || "We could not save your enquiry. Please try again."),
         );
-      formFeedback.textContent =
-        translate("Thank you — your enquiry has been saved. Our team can follow up using the contact details you provided.");
-      formFeedback.className = "form-feedback success";
+
+      const formspreeBody = new URLSearchParams();
+      for (const field of ["name", "email", "phone", "interest", "message"]) {
+        const value = formData.get(field);
+        if (typeof value === "string" && value !== "") formspreeBody.set(field, value);
+      }
+      let notificationSent = false;
+      try {
+        const notificationResponse = await fetch(FORMSPREE_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            Accept: "application/json",
+          },
+          body: formspreeBody.toString(),
+        });
+        const notificationData = await notificationResponse.json().catch(() => ({}));
+        if (!notificationResponse.ok) {
+          throw new Error(
+            notificationData.error ||
+              `Formspree could not accept the enquiry (${notificationResponse.status}).`,
+          );
+        }
+        notificationSent = true;
+      } catch (error) {
+        console.error("Formspree notification failed after local save:", error);
+      }
+
+      if (notificationSent) {
+        formFeedback.textContent =
+          translate("Thank you — your enquiry has been saved. Our team can follow up using the contact details you provided.");
+        formFeedback.className = "form-feedback success";
+        showToast(translate("Your enquiry was saved successfully."));
+      } else {
+        formFeedback.textContent = translate(
+          "Your enquiry was saved, but the email notification could not be sent. Please call us to confirm.",
+        );
+        formFeedback.className = "form-feedback error";
+        showToast(translate("Your enquiry was saved successfully."));
+      }
       quoteForm.reset();
       interestSelect.value = "General consultation";
-      showToast(translate("Your enquiry was saved successfully."));
     } catch (error) {
       formFeedback.textContent =
         error instanceof Error

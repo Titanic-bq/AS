@@ -10,16 +10,11 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.URLDecoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,13 +40,6 @@ import java.util.zip.GZIPOutputStream;
 public final class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final int MAX_BODY_BYTES = 16 * 1024;
-    private static final URI DEFAULT_FORMSPREE_ENDPOINT =
-            URI.create("https://formspree.io/f/xjygezjb");
-    private static final Pattern FORMSPREE_ENDPOINT_PATH = Pattern.compile("^/f/[A-Za-z0-9]+$");
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(3))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build();
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$");
     private static final Pattern CONFIGURED_USER_PROPERTY =
             Pattern.compile("user\\.(\\d+)\\.(username|password|role)");
@@ -80,12 +68,10 @@ public final class Main {
 
     private final InquiryStore inquiryStore;
     private final AdminAuth adminAuth;
-    private final URI formspreeEndpoint;
 
-    private Main(Path dataDirectory, AdminAuth adminAuth, URI formspreeEndpoint) throws IOException {
+    private Main(Path dataDirectory, AdminAuth adminAuth) throws IOException {
         this.inquiryStore = new InquiryStore(dataDirectory);
         this.adminAuth = adminAuth;
-        this.formspreeEndpoint = formspreeEndpoint;
     }
 
     public static void main(String[] args) throws Exception {
@@ -97,8 +83,6 @@ public final class Main {
         String adminUsername = System.getenv("ADMIN_USERNAME");
         String adminPassword = System.getenv("ADMIN_PASSWORD");
         String adminUsersFile = System.getenv("ADMIN_USERS_FILE");
-        URI formspreeEndpoint = parseFormspreeEndpoint(
-                System.getenv("FORMSPREE_ENDPOINT"), DEFAULT_FORMSPREE_ENDPOINT);
         boolean cookieSecure = parseBoolean(System.getenv().getOrDefault("ADMIN_COOKIE_SECURE", "false"),
                 "ADMIN_COOKIE_SECURE");
         AdminAuth adminAuth = null;
@@ -119,7 +103,7 @@ public final class Main {
             throw new IllegalArgumentException(
                     "The server must bind to a loopback address; expose it through a trusted HTTPS reverse proxy");
         }
-        Main app = new Main(data, adminAuth, formspreeEndpoint);
+        Main app = new Main(data, adminAuth);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(address, port), 64);
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
@@ -195,27 +179,6 @@ public final class Main {
         if ("true".equalsIgnoreCase(raw)) return true;
         if ("false".equalsIgnoreCase(raw)) return false;
         throw new IllegalArgumentException(setting + " must be true or false");
-    }
-
-    private static URI parseFormspreeEndpoint(String configured, URI defaultEndpoint) {
-        if (configured == null || configured.isBlank()) return defaultEndpoint;
-        final URI endpoint;
-        try {
-            endpoint = URI.create(configured.strip());
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("FORMSPREE_ENDPOINT must be a valid Formspree form URL", ex);
-        }
-        if (!"https".equalsIgnoreCase(endpoint.getScheme())
-                || !"formspree.io".equalsIgnoreCase(endpoint.getHost())
-                || endpoint.getPort() != -1
-                || endpoint.getRawUserInfo() != null
-                || endpoint.getRawQuery() != null
-                || endpoint.getRawFragment() != null
-                || !FORMSPREE_ENDPOINT_PATH.matcher(endpoint.getPath()).matches()) {
-            throw new IllegalArgumentException(
-                    "FORMSPREE_ENDPOINT must use https://formspree.io/f/<form-id>");
-        }
-        return endpoint;
     }
 
     private void handle(HttpExchange exchange) throws IOException {
@@ -315,7 +278,6 @@ public final class Main {
                 throw new BadRequest(400, "Consent is required to submit an enquiry.");
             }
             Map<String, String> saved = inquiryStore.save(name, email, phone, interest, message);
-            sendFormspreeNotification(saved);
             sendJson(exchange, 201, Map.of("status", "saved", "id", saved.get("id"),
                     "message", "Thank you. Your enquiry has been saved."));
             return;
@@ -415,39 +377,6 @@ public final class Main {
 
     private void requireAdminAuthConfigured() {
         if (adminAuth == null) throw new BadRequest(404, "Not found");
-    }
-
-    private void sendFormspreeNotification(Map<String, String> inquiry) {
-        try {
-            sendFormspreeNotification(formspreeEndpoint, inquiry);
-            LOGGER.log(Level.INFO, "Formspree notification sent for inquiry id={0}", inquiry.get("id"));
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            LOGGER.log(Level.WARNING, "Formspree notification interrupted for inquiry id={0}",
-                    inquiry.get("id"));
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "Formspree notification failed for inquiry id={0}: {1}",
-                    new Object[]{inquiry.get("id"), ex.getMessage()});
-        }
-    }
-
-    static void sendFormspreeNotification(URI endpoint, Map<String, String> inquiry)
-            throws IOException, InterruptedException {
-        String body = List.of("name", "email", "phone", "interest", "message").stream()
-                .filter(inquiry::containsKey)
-                .map(key -> URLEncoder.encode(key, StandardCharsets.UTF_8) + "="
-                        + URLEncoder.encode(inquiry.get(key), StandardCharsets.UTF_8))
-                .collect(java.util.stream.Collectors.joining("&"));
-        HttpRequest request = HttpRequest.newBuilder(endpoint)
-                .timeout(Duration.ofSeconds(5))
-                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-                .build();
-        HttpResponse<Void> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.discarding());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("Formspree returned HTTP " + response.statusCode());
-        }
     }
 
     private static String adminSessionToken(HttpExchange exchange) {
@@ -634,7 +563,7 @@ public final class Main {
         headers.set("X-Frame-Options", "DENY");
         headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+        headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self' https://formspree.io; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
     }
 
     private static void sendJson(HttpExchange exchange, int status, Object body) throws IOException {

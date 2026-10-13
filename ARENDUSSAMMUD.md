@@ -14,7 +14,6 @@ Autentimine, rollid ja esimene haldusvaade on rakendatud:
   räsi abil.
 - Sisselogimine väljastab juhusliku, ajaliselt piiratud
   `HttpOnly`/`SameSite=Strict` küpsise ning sessiooniga seotud CSRF-tõendi.
-
 - `ADMIN` roll näeb kõiki päringuandmeid. `VIEWER` roll näeb ainult saabumise
   aega ja huvipakkuvat toodet.
 - `/admin` pakub eestikeelset sisselogimis- ja päringute vaatamise lehte.
@@ -76,25 +75,26 @@ Postmani päringutele lisa `Origin: https://<sinu-domeen>`; väljalogimisel lisa
 ka sessiooni `csrfToken` väärtus päisesse `X-CSRF-Token`. Kohalikus HTTP-testis
 kasuta sama hosti ja `http` skeemi.
 
-Järgmised tööd on endiselt vajalikud:
+Autentimine, rollid ja põhivaade on rakendatud ning nende kohalikku toimimist
+on kontrollitud. Enne avalikku kasutuselevõttu on veel vaja:
 
 - Seadistada Caddy ja Java rakendus päris domeeni ning serveri peal, enne kui
-  haldusvaade avalikku internetti avatakse.
-
-**Valmis siis, kui:** kaitsmata päring saab keeldumise ning
-administraator saab andmeid turvaliselt vaadata.
+  haldusvaade avalikku internetti avatakse. Tootmises peab
+  `ADMIN_COOKIE_SECURE=true` ning rakendus olema puhverserverile kättesaadav
+  ainult loopback-aadressil.
 
 ## 2. Päringute haldusvaade
 
 **Eesmärk:** muuta saabunud päringutele vastamine mugavaks.
 
-- Administraatori vaade kuvab kuupäeva, kontakti, huvipakkuva toote ja sõnumi;
-  vaatlejale kuvatakse ainult kuupäev ning huvipakkuv toode.
-- Lisada otsing, kuupäeva järgi filtreerimine ning olekud, näiteks „Uus“,
-  „Võtame ühendust“ ja „Suletud“.
-- Lubada päringuid eksportida ainult `ADMIN` rolliga kasutajal.
+- Valmis: admin näeb saabumise aega, kontaktandmeid, huvipakkuvat toodet ja
+  sõnumit; vaatleja näeb ainult saabumise aega ja huvipakkuvat toodet.
+- Järgmise täiendusena lisada otsing, kuupäeva järgi filtreerimine ning
+  olekud, näiteks „Uus“, „Võtame ühendust“ ja „Suletud“.
+- Vajaduse korral lisada päringute eksport ainult `ADMIN` rolliga kasutajale.
 
-**Eeldus:** autentimine, rollid ja lihtne päringute vaatamine on valmis.
+Autentimine, rollid ja lihtne päringute vaatamine on rakendatud. Haldusvaade
+ei ole veel avalikku tootmiskeskkonda juurutatud.
 
 ## 3. Andmebaas, varundus ja andmete elutsükkel
 
@@ -114,24 +114,29 @@ kustutamine toimib dokumenteeritud viisil.
 
 **Eesmärk:** anda ettevõttele ja päringu saatjale päringu saabumisest teada.
 
-- Uue päringu teavitus saadetakse Formspree vormi kaudu Gmaili aadressile,
-  mis on valitud Formspree Workflow e-posti tegevuses.
-- Poe vorm salvestab päringu endiselt `data/inquiries.jsonl` faili ning saadab
-  seejärel väljad Formspreele; Formspree tõrge logitakse ega kustuta salvestatud
-  päringut.
-- Kasutusel olev vorm: `https://formspree.io/f/xjygezjb`. Teise vormi jaoks
-  seadista `FORMSPREE_ENDPOINT` serveri keskkonnas kujul
-  `https://formspree.io/f/<vormi-id>`.
+- Rakendus saadab teavituse päringu Formspree vormi kaudu; Formspree saadab
+  teavituse sellele Gmaili aadressile, mis on valitud Workflow
+  e-posti tegevuses. Päris domeenilt saabumise ja Gmaili kohalejõudmise test
+  on veel tegemata.
+- Poe vorm salvestab päringu esmalt `data/inquiries.jsonl` faili ning saadab
+  seejärel brauserist väljad Formspreele. Nii saab Formspree tavapärase
+  veebivormi päringu koos brauseri päritoluinfoga, mitte anonüümse
+  serveri-serveri päringuna.
+- Kasutusel olev vorm: `https://formspree.io/f/xjygezjb`. Vormi vahetamisel
+  muuda aadressi `AHS/src/main/resources/web/app.js` failis.
 - Formspree ei vaja Gmaili parooli ega API-võtit. Teavituse saaja ja
   e-kirja mall seadistatakse Formspree juhtpaneeli Workflow vaates.
-- Saata kliendile kinnitus, kui e-posti teenus on seadistatud.
-- Hoida võimalike tulevaste e-posti teenuse võtmeid serveri keskkonnaseadetes.
-- Käsitleda ajutisi saatmisvigu nii, et päring ise jääks salvestatuks ja
-  teavituse tulemust saaks jälgida serveri logidest.
+- Kui kohalik salvestamine õnnestub, aga Formspree päring ebaõnnestub, jääb
+  kohalik päring alles ning veebileht annab teavituse saatmise tõrkest teada.
+- Testida teavituse tegelikku kohalejõudmist avalikult domeenilt ning
+  kontrollida Formspree Submissions- ja Spam-vaateid ning Gmaili rämpsposti.
+  Kohalikult `localhost`-aadressilt saadetud test ei vasta domeenipiiranguga
+  tootmistestile.
+- Kliendile automaatse kinnituse saatmine pole veel lisatud.
 
-**Valmis siis, kui:** Formspree saab vormi kaudu uue päringu ning saadab
-seadistatud Gmaili aadressile teavituse. Tee enne kasutuselevõttu päris
-vormitest ja kontrolli ka Gmaili rämpsposti kausta.
+Formspree ühenduse kood on rakendatud, kuid töö pole täielikult kinnitatud enne,
+kui päris domeenilt saadetud test jõuab Formspree Submissions-vaatesse ja
+teavitus Gmaili postkasti või rämpsposti.
 
 ## 5. Testid ja pidev kontroll
 
@@ -177,6 +182,6 @@ keeled kuvavad sama tooteinfot.
 **Valmis siis, kui:** teenust saab uuendada ja taastada dokumenteeritud
 protseduuriga ning tõrked on märgatavad.
 
-Väikese demo puhul saab samme teha järk-järgult. Enne avalikku kasutuselevõttu,
-on kohustuslik teha turvalise autentimise, HTTPS-i, varundamise ega
-isikuandmete halduse samme.
+Väikese demo puhul saab samme teha järk-järgult. Enne avalikku kasutuselevõttu
+tuleb kindlasti seadistada HTTPS ja admini turvaseaded ning määrata päringute
+varundamise, säilitamise ja kustutamise kord.

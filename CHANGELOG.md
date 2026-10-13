@@ -24,8 +24,15 @@ tehtud tööd; tulevikuplaanid on eraldi failis
   seadistus juurutuskeskkonna tööks.
 - Päris domeeni ja serveri HTTPS-juurutus on endiselt seadistamata.
 - Ühendati poe päringu salvestamise järel Formspree vormiga
-  `xjygezjb`, et saada vormis määratud ühele e-posti aadressile teavitus.
-  Teavituse tõrge ei mõjuta päringu kohalikku salvestamist.
+  `xjygezjb` brauseripõhise vormisaatmisega, et Formspree saaks päringu
+  veebilehe päritoluinfoga. Teavituse tõrge ei mõjuta kohalikku salvestamist.
+- Lubati sisupoliitikas (CSP) ühendus Formspreega ning lisati kasutajale
+  selge teade, kui päring salvestati kohapeal, kuid e-posti teavituse saatmine
+  ebaõnnestus.
+- Kohalikus brauseritestis kontrolliti simuleeritud Formspree eduvastust ning
+  tõrke korral kasutajale kuvatavat teadet. Päris Formspree/Gmaili teavituse
+  kohalejõudmine avalikult domeenilt vajab veel kontrolli; muudatused pole
+  veel avalikule veebilehele juurutatud.
 
 ### Dokumentatsioon
 
